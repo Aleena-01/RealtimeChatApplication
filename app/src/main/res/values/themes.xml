@@ -1,0 +1,27 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.RealtimeApplication" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryVariant">@color/primary_variant</item>
+        <item name="colorSecondary">@color/accent</item>
+        <item name="android:windowBackground">@color/background</item>
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/onSurface</item>
+
+        <!-- Action Bar Branding -->
+        <item name="toolbarStyle">@style/Widget.App.Toolbar</item>
+    </style>
+
+    <style name="Theme.RealtimeApplication" parent="Base.Theme.RealtimeApplication" />
+
+    <style name="Widget.App.Toolbar" parent="Widget.MaterialComponents.Toolbar">
+        <item name="background">@color/primary</item>
+        <item name="titleTextColor">@color/white</item>
+    </style>
+
+    <style name="SplashTheme" parent="Theme.Material3.DayNight.NoActionBar">
+        <item name="android:windowBackground">@color/white</item>
+        <item name="android:statusBarColor">@color/white</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>
