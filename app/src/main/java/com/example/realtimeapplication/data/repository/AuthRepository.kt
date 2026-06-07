@@ -49,4 +49,11 @@ class AuthRepository {
             .set(mapOf("about" to about), com.google.firebase.firestore.SetOptions.merge())
             .await()
     }
+
+    suspend fun updateUsername(name: String) {
+        val uid = auth.currentUser?.uid ?: return
+        db.collection(Constants.USERS_COLLECTION).document(uid)
+            .update("username", name)
+            .await()
+    }
 }

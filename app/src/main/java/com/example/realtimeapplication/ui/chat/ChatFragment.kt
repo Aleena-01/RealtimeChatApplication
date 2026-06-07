@@ -15,7 +15,7 @@ import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.realtimeapplication.databinding.FragmentChatBinding
-import com.example.realtimeapplication.data.repository.StorageRepository
+import com.example.realtimeapplication.data.repository.CloudinaryRepository
 import androidx.lifecycle.lifecycleScope
 import com.bumptech.glide.Glide
 import com.example.realtimeapplication.R
@@ -33,12 +33,17 @@ class ChatFragment : Fragment() {
     private val viewModel: ChatViewModel by viewModels()
     private val args: ChatFragmentArgs by navArgs()
     private lateinit var adapter: MessageAdapter
-    private val storageRepository = StorageRepository()
+    private lateinit var cloudinaryRepository: com.example.realtimeapplication.data.repository.CloudinaryRepository
     private val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
     
     private var currentUserSettings: User? = null
     private var otherUserSettings: User? = null
     private var contactData: com.example.realtimeapplication.data.model.Contact? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        cloudinaryRepository = com.example.realtimeapplication.data.repository.CloudinaryRepository(requireContext())
+    }
 
     private val getContent = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { uploadImage(it) }
@@ -242,14 +247,14 @@ class ChatFragment : Fragment() {
         binding.progressBar.visibility = View.VISIBLE
         lifecycleScope.launch {
             try {
-                val imageUrl = storageRepository.uploadImage(uri, "chat_images")
+                val imageUrl = cloudinaryRepository.uploadImage(uri)
                 if (args.isGroup) {
                     // viewModel.sendGroupImageMessage(...) -> Add this to ViewModel if needed
                 } else {
                     viewModel.sendMessage(args.userId, "", type = "image", imageUrl = imageUrl)
                 }
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Failed to upload image", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Failed to upload image: ${e.message}", Toast.LENGTH_SHORT).show()
             } finally {
                 binding.progressBar.visibility = View.GONE
             }

@@ -15,7 +15,7 @@ import com.bumptech.glide.Glide
 import com.example.realtimeapplication.R
 import com.example.realtimeapplication.data.model.User
 import com.example.realtimeapplication.data.repository.AuthRepository
-import com.example.realtimeapplication.data.repository.StorageRepository
+import com.example.realtimeapplication.data.repository.CloudinaryRepository
 import com.example.realtimeapplication.databinding.FragmentRegisterBinding
 import com.example.realtimeapplication.util.Constants
 import com.google.firebase.auth.FirebaseAuth
@@ -26,9 +26,14 @@ class RegisterFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: AuthViewModel by viewModels()
     private val authRepository = AuthRepository()
-    private val storageRepository = StorageRepository()
+    private lateinit var cloudinaryRepository: com.example.realtimeapplication.data.repository.CloudinaryRepository
     
     private var selectedImageUri: Uri? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        cloudinaryRepository = com.example.realtimeapplication.data.repository.CloudinaryRepository(requireContext())
+    }
 
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let {
@@ -60,6 +65,9 @@ class RegisterFragment : Fragment() {
                     if (userData.username.isNotEmpty()) {
                         binding.etUsername.setText(userData.username)
                         binding.btnSave.text = "Continue"
+                    } else {
+                        // Use phone number as default name if username is empty
+                        binding.etUsername.setText(currentUser.phoneNumber)
                     }
                     
                     binding.etAbout.setText(userData.about)
@@ -71,6 +79,9 @@ class RegisterFragment : Fragment() {
                             .error(R.drawable.ic_person)
                             .into(binding.ivProfile)
                     }
+                } else {
+                    // New user, pre-fill with phone number
+                    binding.etUsername.setText(currentUser.phoneNumber)
                 }
             } catch (e: Exception) {
                 // Silently ignore or log fetch error
@@ -120,13 +131,13 @@ class RegisterFragment : Fragment() {
                 selectedImageUri?.let { uri ->
                     try {
                         binding.progressBar.visibility = View.VISIBLE
-                        val uploadedUrl = storageRepository.uploadImage(uri, "profile_images")
+                        val uploadedUrl = cloudinaryRepository.uploadImage(uri)
                         if (uploadedUrl.isNotEmpty()) {
                             imageUrl = uploadedUrl
                         }
                     } catch (uploadError: Exception) {
                         binding.progressBar.visibility = View.GONE
-                        Toast.makeText(requireContext(), "Image upload failed: ${uploadError.message}. Profile will be saved without image.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(requireContext(), "Cloudinary upload failed: ${uploadError.message}. Profile will be saved without image.", Toast.LENGTH_LONG).show()
                     }
                 }
 

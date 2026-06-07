@@ -9,6 +9,8 @@ import android.os.Looper
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import com.google.firebase.auth.FirebaseAuth
 
 class SplashActivity : AppCompatActivity() {
@@ -41,15 +43,26 @@ class SplashActivity : AppCompatActivity() {
             val intent = Intent(this, MainActivity::class.java)
             
             if (user != null) {
-                // If user is logged in, we need to check if profile is complete in MainActivity
-                intent.putExtra("check_profile", true)
+                // Pre-check profile to decide where to land
+                lifecycleScope.launch {
+                    try {
+                        val userData = com.example.realtimeapplication.data.repository.AuthRepository().getUserData(user.uid)
+                        if (userData == null || userData.username.isEmpty()) {
+                            intent.putExtra("start_destination", "register")
+                        } else {
+                            intent.putExtra("start_destination", "home")
+                        }
+                    } catch (e: Exception) {
+                        intent.putExtra("start_destination", "home")
+                    }
+                    startActivity(intent)
+                    finish()
+                }
             } else {
-                intent.putExtra("is_logged_in", false)
+                intent.putExtra("start_destination", "login")
+                startActivity(intent)
+                finish()
             }
-
-            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            startActivity(intent)
-            finish()
         }, 1500)
     }
 }

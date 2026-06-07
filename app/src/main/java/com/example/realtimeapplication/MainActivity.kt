@@ -41,29 +41,22 @@ class MainActivity : AppCompatActivity() {
         
         binding.bottomNav.setupWithNavController(navController)
         
-        val isLoggedIn = intent.getBooleanExtra("is_logged_in", false)
-        val checkProfile = intent.getBooleanExtra("check_profile", false)
+        val startDestination = intent.getStringExtra("start_destination")
 
-        if (checkProfile) {
-            val uid = FirebaseAuth.getInstance().currentUser?.uid
-            if (uid != null) {
-                lifecycleScope.launch {
-                    val userData = AuthRepository().getUserData(uid)
-                    if (userData == null || userData.username.isEmpty()) {
-                        navController.navigate(R.id.registerFragment, null, NavOptions.Builder()
-                            .setPopUpTo(R.id.nav_graph, true)
-                            .build())
-                    } else {
-                        navController.navigate(R.id.homeFragment, null, NavOptions.Builder()
-                            .setPopUpTo(R.id.nav_graph, true)
-                            .build())
-                    }
-                }
+        when (startDestination) {
+            "register" -> {
+                navController.navigate(R.id.registerFragment, null, NavOptions.Builder()
+                    .setPopUpTo(R.id.nav_graph, true)
+                    .build())
             }
-        } else if (isLoggedIn) {
-            navController.navigate(R.id.homeFragment, null, NavOptions.Builder()
-                .setPopUpTo(R.id.nav_graph, true)
-                .build())
+            "home" -> {
+                navController.navigate(R.id.homeFragment, null, NavOptions.Builder()
+                    .setPopUpTo(R.id.nav_graph, true)
+                    .build())
+            }
+            "login" -> {
+                // Already at login (start destination)
+            }
         }
         
         navController.addOnDestinationChangedListener { _, destination, _ ->

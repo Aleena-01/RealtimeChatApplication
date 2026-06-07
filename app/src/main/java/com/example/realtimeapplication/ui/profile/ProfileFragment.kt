@@ -18,7 +18,7 @@ import com.bumptech.glide.Glide
 import com.example.realtimeapplication.R
 import com.example.realtimeapplication.data.repository.AuthRepository
 import com.example.realtimeapplication.data.repository.ChatRepository
-import com.example.realtimeapplication.data.repository.StorageRepository
+import com.example.realtimeapplication.data.repository.CloudinaryRepository
 import com.example.realtimeapplication.databinding.FragmentProfileBinding
 import com.example.realtimeapplication.ui.auth.AuthViewModel
 import kotlinx.coroutines.launch
@@ -28,8 +28,13 @@ class ProfileFragment : Fragment() {
     private val binding get() = _binding!!
     private val authViewModel: AuthViewModel by viewModels()
     private val authRepository = AuthRepository()
-    private val storageRepository = StorageRepository()
+    private lateinit var cloudinaryRepository: com.example.realtimeapplication.data.repository.CloudinaryRepository
     private val chatRepository = ChatRepository()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        cloudinaryRepository = com.example.realtimeapplication.data.repository.CloudinaryRepository(requireContext())
+    }
 
     private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         uri?.let { uploadProfileImage(it) }
@@ -70,6 +75,10 @@ class ProfileFragment : Fragment() {
             findNavController().navigate(R.id.action_profileFragment_to_aboutEditFragment)
         }
 
+        binding.ivEditName.setOnClickListener {
+            showEditNameDialog()
+        }
+
         binding.chipBusy.setOnClickListener { updateStatus("Busy 🚫") }
         binding.chipNotAvailable.setOnClickListener { updateStatus("Not available 📴") }
         binding.chipOnlyCalls.setOnClickListener { updateStatus("Only calls 📞") }
@@ -105,7 +114,7 @@ class ProfileFragment : Fragment() {
     private fun uploadProfileImage(uri: Uri) {
         lifecycleScope.launch {
             try {
-                val url = storageRepository.uploadImage(uri, "profile_pics")
+                val url = cloudinaryRepository.uploadImage(uri)
                 authRepository.updateProfileImage(url)
                 Toast.makeText(requireContext(), "Profile updated", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
@@ -132,6 +141,31 @@ class ProfileFragment : Fragment() {
                 Toast.makeText(requireContext(), "Failed to update status", Toast.LENGTH_SHORT).show()
             }
         }
+    }
+
+    private fun showEditNameDialog() {
+        val editText = android.widget.EditText(requireContext())
+        editText.setText(binding.tvProfileName.text)
+        editText.setSelection(editText.text.length)
+        
+        androidx.appcompat.app.AlertDialog.Builder(requireContext())
+            .setTitle("Edit Name")
+            .setView(editText)
+            .setPositiveButton("Save") { _, _ ->
+                val newName = editText.text.toString().trim()
+                if (newName.isNotEmpty()) {
+                    lifecycleScope.launch {
+                        try {
+                            authRepository.updateUsername(newName)
+                            Toast.makeText(requireContext(), "Name updated", Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {
+                            Toast.makeText(requireContext(), "Failed to update name", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     override fun onDestroyView() {
