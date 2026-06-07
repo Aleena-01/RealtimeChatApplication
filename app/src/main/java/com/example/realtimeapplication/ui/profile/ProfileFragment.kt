@@ -1,5 +1,6 @@
 package com.example.realtimeapplication.ui.profile
 
+import android.content.Context
 import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -42,17 +43,21 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Observe current user details from Firestore
-        val currentUid = authViewModel.user.value?.uid
+        val sharedPrefs = requireContext().getSharedPreferences("settings", Context.MODE_PRIVATE)
+        binding.switchDarkMode.isChecked = sharedPrefs.getBoolean("dark_mode", false)
+
+        val currentUid = com.google.firebase.auth.FirebaseAuth.getInstance().currentUser?.uid
         if (currentUid != null) {
             chatRepository.getUser(currentUid).asLiveData().observe(viewLifecycleOwner) { user ->
                 user?.let {
                     binding.tvProfileName.text = it.username
-                    binding.tvProfileEmail.text = if (it.email.isNotEmpty()) it.email else it.phoneNumber
+                    binding.tvProfileEmail.text = it.phoneNumber
+                    binding.tvCurrentStatus.text = it.about
                     
-                    Glide.with(this)
+                    Glide.with(this@ProfileFragment)
                         .load(it.profileImageUrl)
                         .placeholder(R.drawable.ic_person)
+                        .error(R.drawable.ic_person)
                         .into(binding.ivLargeProfile)
                     
                     binding.switchReadReceipts.isChecked = it.showReadReceipts
@@ -61,11 +66,21 @@ class ProfileFragment : Fragment() {
             }
         }
 
+        binding.ivEditStatus.setOnClickListener {
+            findNavController().navigate(R.id.action_profileFragment_to_aboutEditFragment)
+        }
+
+        binding.chipBusy.setOnClickListener { updateStatus("Busy 🚫") }
+        binding.chipNotAvailable.setOnClickListener { updateStatus("Not available 📴") }
+        binding.chipOnlyCalls.setOnClickListener { updateStatus("Only calls 📞") }
+        binding.chipGoodVibes.setOnClickListener { updateStatus("Good vibes only ✨") }
+
         binding.fabChangeDp.setOnClickListener {
             pickImage.launch("image/*")
         }
 
         binding.switchDarkMode.setOnCheckedChangeListener { _, isChecked ->
+            sharedPrefs.edit().putBoolean("dark_mode", isChecked).apply()
             if (isChecked) {
                 AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
             } else {
@@ -105,6 +120,17 @@ class ProfileFragment : Fragment() {
                 binding.switchLastSeen.isChecked,
                 binding.switchReadReceipts.isChecked
             )
+        }
+    }
+
+    private fun updateStatus(status: String) {
+        lifecycleScope.launch {
+            try {
+                authRepository.updateAbout(status)
+                Toast.makeText(requireContext(), "Status updated", Toast.LENGTH_SHORT).show()
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Failed to update status", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 

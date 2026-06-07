@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.realtimeapplication.data.repository.GroupRepository
 import com.example.realtimeapplication.databinding.FragmentCreateGroupBinding
 import com.example.realtimeapplication.ui.home.HomeViewModel
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 
 class CreateGroupFragment : Fragment() {
@@ -20,6 +21,7 @@ class CreateGroupFragment : Fragment() {
     private val binding get() = _binding!!
     private val homeViewModel: HomeViewModel by viewModels()
     private val groupRepository = GroupRepository()
+    private val auth = FirebaseAuth.getInstance()
     private lateinit var adapter: SelectableUserAdapter
     private var selectedMembers = listOf<String>()
 
@@ -33,24 +35,31 @@ class CreateGroupFragment : Fragment() {
 
         setupRecyclerView()
 
-        homeViewModel.users.observe(viewLifecycleOwner) { users ->
-            adapter.submitList(users)
+        binding.toolbar.setNavigationOnClickListener {
+            findNavController().navigateUp()
+        }
+
+        homeViewModel.homeItemsWithContacts.observe(viewLifecycleOwner) { pair ->
+            // Extract all users from homeItems (which might include groups, so filter for User)
+            val users = pair.first.filterIsInstance<com.example.realtimeapplication.data.model.User>()
+            adapter.submitList(users, pair.second)
         }
 
         binding.btnCreateGroup.setOnClickListener {
-            val groupName = binding.etGroupName.text.toString()
+            val groupName = binding.etGroupName.text.toString().trim()
             if (groupName.isEmpty()) {
                 Toast.makeText(requireContext(), "Enter group name", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            if (selectedMembers.isEmpty()) {
-                Toast.makeText(requireContext(), "Select at least one member", Toast.LENGTH_SHORT).show()
+            if (selectedMembers.size < 2) {
+                Toast.makeText(requireContext(), "Please select at least 2 members", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             lifecycleScope.launch {
                 try {
                     groupRepository.createGroup(groupName, selectedMembers)
+                    Toast.makeText(requireContext(), "Group created successfully", Toast.LENGTH_SHORT).show()
                     findNavController().navigateUp()
                 } catch (e: Exception) {
                     Toast.makeText(requireContext(), "Error: ${e.message}", Toast.LENGTH_SHORT).show()

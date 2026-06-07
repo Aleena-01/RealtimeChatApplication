@@ -1,21 +1,19 @@
 package com.example.realtimeapplication.ui.auth
 
-import android.app.Activity
+import android.graphics.LinearGradient
+import android.graphics.Shader
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import com.example.realtimeapplication.R
 import com.example.realtimeapplication.databinding.FragmentLoginBinding
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
 import com.google.firebase.FirebaseException
-import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
 import java.util.concurrent.TimeUnit
@@ -25,19 +23,6 @@ class LoginFragment : Fragment() {
     private val binding get() = _binding!!
     private val viewModel: AuthViewModel by viewModels()
 
-    private val googleSignInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            try {
-                val account = task.getResult(Exception::class.java)!!
-                val credential = GoogleAuthProvider.getCredential(account.idToken, null)
-                viewModel.signInWithCredential(credential)
-            } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Google sign in failed: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
-    }
-
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentLoginBinding.inflate(inflater, container, false)
         return binding.root
@@ -46,41 +31,40 @@ class LoginFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.btnLogin.setOnClickListener {
-            val email = binding.etEmail.text.toString()
-            val pass = binding.etPassword.text.toString()
-            if (email.isNotEmpty() && pass.isNotEmpty()) {
-                viewModel.login(email, pass)
+        // Gradient text for "ChatApp"
+        val paint = binding.tvWelcome.paint
+        val width = paint.measureText(binding.tvWelcome.text.toString())
+        val textShader = LinearGradient(
+            0f, 0f, width, binding.tvWelcome.textSize,
+            intArrayOf(
+                ContextCompat.getColor(requireContext(), R.color.primary),
+                ContextCompat.getColor(requireContext(), R.color.accent)
+            ), null, Shader.TileMode.CLAMP
+        )
+        binding.tvWelcome.paint.shader = textShader
+
+        // Setup CCP with EditText
+        binding.ccp.registerCarrierNumberEditText(binding.etPhone)
+
+        // Add some "interactive" feel with a simple fade-in
+        binding.cardLogin.alpha = 0f
+        binding.cardLogin.animate().alpha(1f).setDuration(800).start()
+        binding.ivLogo.scaleX = 0.8f
+        binding.ivLogo.scaleY = 0.8f
+        binding.ivLogo.animate().scaleX(1f).scaleY(1f).setDuration(1000).start()
+
+        binding.btnSendOtp.setOnClickListener {
+            if (binding.ccp.isValidFullNumber) {
+                val fullNumber = binding.ccp.fullNumberWithPlus
+                startPhoneVerification(fullNumber)
             } else {
-                Toast.makeText(requireContext(), "Please enter email and password", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Please enter a valid phone number", Toast.LENGTH_SHORT).show()
             }
-        }
-
-        binding.btnGoogle.setOnClickListener {
-            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(getString(R.string.default_web_client_id))
-                .requestEmail()
-                .build()
-            val client = GoogleSignIn.getClient(requireActivity(), gso)
-            googleSignInLauncher.launch(client.signInIntent)
-        }
-
-        binding.btnPhone.setOnClickListener {
-            val phone = binding.etEmail.text.toString()
-            if (phone.isNotEmpty()) {
-                startPhoneVerification(phone)
-            } else {
-                Toast.makeText(requireContext(), "Enter phone number in the Email field", Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        binding.tvGoToRegister.setOnClickListener {
-            findNavController().navigate(R.id.action_loginFragment_to_registerFragment)
         }
 
         viewModel.user.observe(viewLifecycleOwner) { user ->
             if (user != null) {
-                findNavController().navigate(R.id.action_loginFragment_to_homeFragment)
+                findNavController().navigate(LoginFragmentDirections.actionLoginFragmentToHomeFragment())
             }
         }
 
@@ -88,16 +72,16 @@ class LoginFragment : Fragment() {
             error?.let {
                 Toast.makeText(requireContext(), it, Toast.LENGTH_SHORT).show()
                 viewModel.clearError()
+                binding.progressBar.visibility = View.GONE
+                binding.btnSendOtp.isEnabled = true
             }
-        }
-
-        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
-            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-            binding.btnLogin.isEnabled = !isLoading
         }
     }
 
     private fun startPhoneVerification(phoneNumber: String) {
+        binding.progressBar.visibility = View.VISIBLE
+        binding.btnSendOtp.isEnabled = false
+        
         val options = PhoneAuthOptions.newBuilder()
             .setPhoneNumber(phoneNumber)
             .setTimeout(60L, TimeUnit.SECONDS)
@@ -108,10 +92,14 @@ class LoginFragment : Fragment() {
                 }
 
                 override fun onVerificationFailed(e: FirebaseException) {
+                    binding.progressBar.visibility = View.GONE
+                    binding.btnSendOtp.isEnabled = true
                     Toast.makeText(requireContext(), "Verification failed: ${e.message}", Toast.LENGTH_LONG).show()
                 }
 
                 override fun onCodeSent(verificationId: String, token: PhoneAuthProvider.ForceResendingToken) {
+                    binding.progressBar.visibility = View.GONE
+                    binding.btnSendOtp.isEnabled = true
                     val action = LoginFragmentDirections.actionLoginFragmentToOtpFragment(phoneNumber, verificationId)
                     findNavController().navigate(action)
                 }

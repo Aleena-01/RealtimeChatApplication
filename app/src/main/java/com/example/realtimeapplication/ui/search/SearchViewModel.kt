@@ -3,14 +3,18 @@ package com.example.realtimeapplication.ui.search
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.realtimeapplication.data.model.User
+import com.example.realtimeapplication.data.repository.UserRepository
 import com.example.realtimeapplication.util.Constants
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.launch
 
 class SearchViewModel : ViewModel() {
     private val db = FirebaseFirestore.getInstance()
     private val auth = FirebaseAuth.getInstance()
+    private val userRepository = UserRepository()
 
     private val _searchResults = MutableLiveData<List<User>>()
     val searchResults: LiveData<List<User>> = _searchResults
@@ -22,37 +26,48 @@ class SearchViewModel : ViewModel() {
     val searchError: LiveData<String?> = _searchError
 
     fun searchUsers(query: String) {
-        val normalizedQuery = query.trim()
-        if (normalizedQuery.isEmpty()) {
+        if (query.trim().isEmpty()) {
             _searchResults.value = emptyList()
             _searchError.value = null
             return
         }
 
+        val normalizedQuery = Constants.normalizePhone(query)
+
         _isSearching.value = true
         _searchError.value = null
 
-        // We check by Email or Phone specifically if it looks like one, or just query all
-        db.collection(Constants.USERS_COLLECTION)
-            .get()
-            .addOnSuccessListener { snapshot ->
-                val allUsers = snapshot.toObjects(User::class.java)
-                val results = allUsers.filter { user ->
-                    (user.email.equals(normalizedQuery, ignoreCase = true) || 
-                     user.phoneNumber == normalizedQuery || 
-                     user.username.contains(normalizedQuery, ignoreCase = true)) &&
-                     user.uid != auth.currentUser?.uid
-                }
-
-                _searchResults.value = results
-                if (results.isEmpty()) {
-                    _searchError.value = "The person with '$normalizedQuery' is not on the app."
-                }
+        viewModelScope.launch {
+            try {
+                // 1. Try exact phone search first
+                val exactUser = userRepository.getUserByPhone(normalizedQuery)
+                
+                // 2. Also search by name AND partial phone matches to be more flexible
+                db.collection(Constants.USERS_COLLECTION)
+                    .get()
+                    .addOnSuccessListener { snapshot ->
+                        val allUsers = snapshot.toObjects(User::class.java)
+                        val queryLower = query.lowercase()
+                        
+                        val results = allUsers.filter { user ->
+                            val matchesName = user.username.lowercase().contains(queryLower)
+                            val matchesPhone = user.phoneNumber.contains(query)
+                            
+                            (matchesName || matchesPhone) && user.uid != auth.currentUser?.uid
+                        }
+                        
+                        // Combine exact and filtered results, ensuring uniqueness by UID
+                        val combinedResults = (listOfNotNull(exactUser) + results).distinctBy { it.uid }
+                        _searchResults.value = combinedResults
+                    }
+                    .addOnFailureListener {
+                        _searchError.value = "Search failed: ${it.message}"
+                    }
+            } catch (e: Exception) {
+                _searchError.value = "Search failed: ${e.message}"
+            } finally {
                 _isSearching.value = false
             }
-            .addOnFailureListener {
-                _searchError.value = "Search failed: ${it.message}"
-                _isSearching.value = false
-            }
+        }
     }
 }

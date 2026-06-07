@@ -10,18 +10,25 @@
 
         <!-- Action Bar Branding -->
         <item name="toolbarStyle">@style/Widget.App.Toolbar</item>
+
+        <!-- Bottom Nav Branding -->
+        <item name="bottomNavigationStyle">@style/Widget.App.BottomNavigationView</item>
     </style>
 
     <style name="Theme.RealtimeApplication" parent="Base.Theme.RealtimeApplication" />
 
+    <style name="Widget.App.BottomNavigationView" parent="Widget.MaterialComponents.BottomNavigationView">
+        <item name="backgroundTint">@android:color/transparent</item>
+    </style>
+
     <style name="Widget.App.Toolbar" parent="Widget.MaterialComponents.Toolbar">
-        <item name="background">@color/primary</item>
-        <item name="titleTextColor">@color/white</item>
+        <item name="background">?attr/colorSurface</item>
+        <item name="titleTextColor">?attr/colorOnSurface</item>
     </style>
 
     <style name="SplashTheme" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="android:windowBackground">@color/white</item>
-        <item name="android:statusBarColor">@color/white</item>
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:statusBarColor">@android:color/white</item>
         <item name="android:windowLightStatusBar">true</item>
     </style>
 </resources>

@@ -13,25 +13,22 @@ class AuthRepository {
 
     fun getCurrentUser() = auth.currentUser
 
-    suspend fun login(email: String, pass: String) = auth.signInWithEmailAndPassword(email, pass).await()
-
-    suspend fun register(email: String, pass: String, username: String, phone: String = "") {
-        val result = auth.createUserWithEmailAndPassword(email, pass).await()
-        val uid = result.user?.uid ?: return
-        val user = User(
-            uid = uid, 
-            username = username, 
-            email = email, 
-            phoneNumber = phone,
-            showLastSeen = true,
-            showReadReceipts = true
-        )
-        db.collection(Constants.USERS_COLLECTION).document(uid).set(user).await()
-    }
-
     suspend fun signInWithCredential(credential: AuthCredential) = auth.signInWithCredential(credential).await()
 
     fun logout() = auth.signOut()
+
+    suspend fun getUserData(uid: String): User? {
+        return try {
+            val doc = db.collection(Constants.USERS_COLLECTION).document(uid).get().await()
+            doc.toObject(User::class.java)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    suspend fun saveUser(user: User) {
+        db.collection(Constants.USERS_COLLECTION).document(user.uid).set(user).await()
+    }
     
     suspend fun updateProfileImage(url: String) {
         val uid = auth.currentUser?.uid ?: return
@@ -44,5 +41,12 @@ class AuthRepository {
             "showLastSeen", lastSeen,
             "showReadReceipts", readReceipts
         ).await()
+    }
+
+    suspend fun updateAbout(about: String) {
+        val uid = auth.currentUser?.uid ?: return
+        db.collection(Constants.USERS_COLLECTION).document(uid)
+            .set(mapOf("about" to about), com.google.firebase.firestore.SetOptions.merge())
+            .await()
     }
 }

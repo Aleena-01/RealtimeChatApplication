@@ -3,24 +3,32 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 
-    <!-- Purple Blue Modern Theme -->
+    <!-- Modern Purple Palette -->
     <color name="primary">#673AB7</color> <!-- Deep Purple -->
-    <color name="primary_variant">#3F51B5</color> <!-- Indigo/Blue -->
-    <color name="accent">#00BCD4</color> <!-- Cyan -->
+    <color name="primary_light">#9575CD</color>
+    <color name="primary_variant">#512DA8</color>
+    <color name="accent">#7B1FA2</color> <!-- Darker Purple for accent -->
+    <color name="accent_soft">#F3E5F5</color>
 
-    <color name="background">#F3F4F9</color>
-    <color name="surface">#FFFFFF</color>
-    <color name="onBackground">#1A1C1E</color>
-    <color name="onSurface">#1A1C1E</color>
+    <color name="background">#FFFFFF</color>
+    <color name="surface">#F5F5F5</color>
+    <color name="onBackground">#121212</color>
+    <color name="onSurface">#121212</color>
 
-    <color name="message_sent_bg">#673AB7</color> <!-- Purple Sent -->
+    <!-- Chat Specific -->
+    <color name="message_sent_bg">#673AB7</color>
     <color name="message_sent_text">#FFFFFF</color>
-    <color name="message_received_bg">#FFFFFF</color> <!-- White Received -->
-    <color name="message_received_text">#1A1C1E</color>
+    <color name="message_received_bg">#E0E0E0</color>
+    <color name="message_received_text">#121212</color>
 
-    <color name="text_secondary">#6C727A</color>
-    <color name="divider">#E1E2EC</color>
+    <!-- Glassmorphism & Effects -->
+    <color name="glass_white">#CCFFFFFF</color>
+    <color name="glass_border">#DDDDDD</color>
+    <color name="nav_shadow">#1A000000</color>
 
+    <color name="text_secondary">#757575</color>
+    <color name="divider">#EEEEEE</color>
+    <color name="status_online">#4CAF50</color>
     <color name="accent_gold">#FFD700</color>
-    <color name="glass_white">#B3FFFFFF</color>
+    <color name="chat_background">#FFFFFF</color>
 </resources>

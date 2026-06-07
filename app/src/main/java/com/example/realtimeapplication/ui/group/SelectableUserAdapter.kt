@@ -12,10 +12,12 @@ class SelectableUserAdapter(private val onSelectionChanged: (List<String>) -> Un
     RecyclerView.Adapter<SelectableUserAdapter.ViewHolder>() {
 
     private var users = listOf<User>()
+    private var contactMap = mapOf<String, String>()
     private val selectedUserIds = mutableSetOf<String>()
 
-    fun submitList(newUsers: List<User>) {
+    fun submitList(newUsers: List<User>, contacts: List<com.example.realtimeapplication.data.model.Contact> = emptyList()) {
         users = newUsers
+        contactMap = contacts.associateBy({ it.contactUid }, { it.customName })
         notifyDataSetChanged()
     }
 
@@ -32,7 +34,7 @@ class SelectableUserAdapter(private val onSelectionChanged: (List<String>) -> Un
 
     inner class ViewHolder(private val binding: ItemUserSelectableBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(user: User) {
-            binding.tvUsername.text = user.username
+            binding.tvUsername.text = contactMap[user.uid] ?: user.username
             Glide.with(binding.ivUserProfile.context)
                 .load(user.profileImageUrl)
                 .placeholder(R.drawable.ic_person)

@@ -6,4 +6,9 @@
         android:icon="@drawable/ic_search"
         android:title="Search"
         app:showAsAction="ifRoom" />
+    <item
+        android:id="@+id/action_create_group"
+        android:icon="@drawable/ic_person_add"
+        android:title="Create Group"
+        app:showAsAction="always" />
 </menu>

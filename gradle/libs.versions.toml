@@ -16,6 +16,7 @@ lifecycle = "2.8.7"
 googleServices = "4.4.2"
 coroutines = "1.10.1"
 googleSignIn = "21.3.0"
+ccp = "2.7.3"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -52,6 +53,7 @@ glide-compiler = { group = "com.github.bumptech.glide", name = "compiler", versi
 # Lifecycle
 lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmodel-ktx", version.ref = "lifecycle" }
 lifecycle-livedata = { group = "androidx.lifecycle", name = "lifecycle-livedata-ktx", version.ref = "lifecycle" }
+ccp = { group = "com.hbb20", name = "ccp", version.ref = "ccp" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

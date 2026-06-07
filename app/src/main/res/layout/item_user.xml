@@ -17,7 +17,9 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:shapeAppearanceOverlay="@style/CircleImage" />
+        app:shapeAppearanceOverlay="@style/CircleImage"
+        app:strokeWidth="1dp"
+        app:strokeColor="@color/divider" />
 
     <TextView
         android:id="@+id/tv_username"
@@ -62,6 +64,23 @@
         android:textSize="12sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/tv_username" />
+
+    <TextView
+        android:id="@+id/tv_unread_count"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:layout_marginTop="4dp"
+        android:background="@drawable/unread_badge_background"
+        android:gravity="center"
+        android:text="1"
+        android:textColor="@color/white"
+        android:textSize="10sp"
+        android:textStyle="bold"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/tv_last_message"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tv_time"
+        tools:visibility="visible" />
 
     <View
         android:layout_width="0dp"

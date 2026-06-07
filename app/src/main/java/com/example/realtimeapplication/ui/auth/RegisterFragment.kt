@@ -1,6 +1,6 @@
 package com.example.realtimeapplication.ui.auth
 
-import android.app.Activity
+import android.net.Uri
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -9,32 +9,31 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.bumptech.glide.Glide
 import com.example.realtimeapplication.R
+import com.example.realtimeapplication.data.model.User
+import com.example.realtimeapplication.data.repository.AuthRepository
+import com.example.realtimeapplication.data.repository.StorageRepository
 import com.example.realtimeapplication.databinding.FragmentRegisterBinding
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.auth.api.signin.GoogleSignInOptions
-import com.google.firebase.FirebaseException
-import com.google.firebase.auth.GoogleAuthProvider
-import com.google.firebase.auth.PhoneAuthOptions
-import com.google.firebase.auth.PhoneAuthProvider
-import java.util.concurrent.TimeUnit
+import com.example.realtimeapplication.util.Constants
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.launch
 
 class RegisterFragment : Fragment() {
     private var _binding: FragmentRegisterBinding? = null
     private val binding get() = _binding!!
     private val viewModel: AuthViewModel by viewModels()
+    private val authRepository = AuthRepository()
+    private val storageRepository = StorageRepository()
+    
+    private var selectedImageUri: Uri? = null
 
-    private val googleSignInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            try {
-                val account = task.getResult(Exception::class.java)!!
-                val credential = GoogleAuthProvider.getCredential(account.idToken, null)
-                viewModel.signInWithCredential(credential)
-            } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Google sign up failed: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
+    private val pickImage = registerForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
+        uri?.let {
+            selectedImageUri = it
+            binding.ivProfile.setImageURI(it)
         }
     }
 
@@ -46,39 +45,45 @@ class RegisterFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.btnGoogleSignup.setOnClickListener {
-            val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
-                .requestIdToken(getString(R.string.default_web_client_id))
-                .requestEmail()
-                .build()
-            val client = GoogleSignIn.getClient(requireActivity(), gso)
-            googleSignInLauncher.launch(client.signInIntent)
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser == null) {
+            findNavController().navigate(R.id.action_registerFragment_to_homeFragment)
+            return
         }
 
-        binding.btnRegister.setOnClickListener {
-            val username = binding.etUsername.text.toString()
-            val phone = binding.etPhone.text.toString()
-            
-            if (username.isEmpty()) {
+        // Pre-fill data if available
+        lifecycleScope.launch {
+            binding.progressBar.visibility = View.VISIBLE
+            val userData = authRepository.getUserData(currentUser.uid)
+            binding.progressBar.visibility = View.GONE
+            if (userData != null && userData.username.isNotEmpty()) {
+                binding.etUsername.setText(userData.username)
+                binding.etAbout.setText(userData.about)
+                binding.btnSave.text = "Continue" // WhatsApp style "Continue" if returning
+                if (userData.profileImageUrl.isNotEmpty()) {
+                    Glide.with(this@RegisterFragment)
+                        .load(userData.profileImageUrl)
+                        .placeholder(R.drawable.ic_person)
+                        .into(binding.ivProfile)
+                }
+            }
+        }
+
+        binding.fabAddPhoto.setOnClickListener {
+            pickImage.launch("image/*")
+        }
+
+        binding.btnSave.setOnClickListener {
+            val name = binding.etUsername.text.toString().trim()
+            if (name.isEmpty()) {
                 Toast.makeText(requireContext(), "Please enter your name", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            
-            if (phone.isNotEmpty()) {
-                startPhoneVerification(phone)
-            } else {
-                Toast.makeText(requireContext(), "Please enter phone number", Toast.LENGTH_SHORT).show()
-            }
+            saveProfile(name)
         }
 
-        binding.tvGoToLogin.setOnClickListener {
-            findNavController().navigateUp()
-        }
-
-        viewModel.user.observe(viewLifecycleOwner) { user ->
-            if (user != null) {
-                findNavController().navigate(R.id.action_registerFragment_to_homeFragment)
-            }
+        binding.btnSkip.setOnClickListener {
+            findNavController().navigate(R.id.action_registerFragment_to_homeFragment)
         }
 
         viewModel.error.observe(viewLifecycleOwner) { error ->
@@ -87,35 +92,44 @@ class RegisterFragment : Fragment() {
                 viewModel.clearError()
             }
         }
-
-        viewModel.loading.observe(viewLifecycleOwner) { isLoading ->
-            binding.progressBar.visibility = if (isLoading) View.VISIBLE else View.GONE
-            binding.btnRegister.isEnabled = !isLoading
-            binding.btnGoogleSignup.isEnabled = !isLoading
-        }
     }
 
-    private fun startPhoneVerification(phoneNumber: String) {
-        val options = PhoneAuthOptions.newBuilder()
-            .setPhoneNumber(phoneNumber)
-            .setTimeout(60L, TimeUnit.SECONDS)
-            .setActivity(requireActivity())
-            .setCallbacks(object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
-                override fun onVerificationCompleted(credential: com.google.firebase.auth.PhoneAuthCredential) {
-                    viewModel.signInWithCredential(credential)
+    private fun saveProfile(name: String) {
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val phone = FirebaseAuth.getInstance().currentUser?.phoneNumber ?: ""
+        val about = binding.etAbout.text.toString().trim()
+        
+        binding.progressBar.visibility = View.VISIBLE
+        binding.btnSave.isEnabled = false
+        
+        lifecycleScope.launch {
+            try {
+                val existingUser = authRepository.getUserData(uid)
+                var imageUrl = ""
+                selectedImageUri?.let {
+                    imageUrl = storageRepository.uploadImage(it, "profile_images")
+                } ?: run {
+                    imageUrl = existingUser?.profileImageUrl ?: ""
                 }
 
-                override fun onVerificationFailed(e: FirebaseException) {
-                    Toast.makeText(requireContext(), "Verification failed: ${e.message}", Toast.LENGTH_LONG).show()
-                }
-
-                override fun onCodeSent(verificationId: String, token: PhoneAuthProvider.ForceResendingToken) {
-                    val action = RegisterFragmentDirections.actionRegisterFragmentToOtpFragment(phoneNumber, verificationId)
-                    findNavController().navigate(action)
-                }
-            })
-            .build()
-        PhoneAuthProvider.verifyPhoneNumber(options)
+                val user = User(
+                    uid = uid,
+                    username = name,
+                    phoneNumber = Constants.normalizePhone(phone),
+                    profileImageUrl = imageUrl,
+                    status = "Online",
+                    about = if (about.isNotEmpty()) about else (existingUser?.about ?: "Hey there! I am using ChatApp."),
+                    lastSeen = System.currentTimeMillis()
+                )
+                authRepository.saveUser(user)
+                findNavController().navigate(R.id.action_registerFragment_to_homeFragment)
+            } catch (e: Exception) {
+                Toast.makeText(requireContext(), "Failed to save profile: ${e.message}", Toast.LENGTH_SHORT).show()
+            } finally {
+                binding.progressBar.visibility = View.GONE
+                binding.btnSave.isEnabled = true
+            }
+        }
     }
 
     override fun onDestroyView() {

@@ -11,9 +11,6 @@
         android:label="Login"
         tools:layout="@layout/fragment_login">
         <action
-            android:id="@+id/action_loginFragment_to_registerFragment"
-            app:destination="@id/registerFragment" />
-        <action
             android:id="@+id/action_loginFragment_to_homeFragment"
             app:destination="@id/homeFragment"
             app:popUpTo="@id/loginFragment"
@@ -26,16 +23,13 @@
     <fragment
         android:id="@+id/registerFragment"
         android:name="com.example.realtimeapplication.ui.auth.RegisterFragment"
-        android:label="Register"
+        android:label="Profile Setup"
         tools:layout="@layout/fragment_register">
         <action
             android:id="@+id/action_registerFragment_to_homeFragment"
             app:destination="@id/homeFragment"
             app:popUpTo="@id/loginFragment"
             app:popUpToInclusive="true" />
-        <action
-            android:id="@+id/action_registerFragment_to_otpFragment"
-            app:destination="@id/otpFragment" />
     </fragment>
 
     <fragment
@@ -49,14 +43,14 @@
         <argument
             android:name="verificationId"
             app:argType="string" />
-        <argument
-            android:name="username"
-            app:argType="string"
-            app:nullable="true"
-            android:defaultValue="@null" />
         <action
             android:id="@+id/action_otpFragment_to_homeFragment"
             app:destination="@id/homeFragment"
+            app:popUpTo="@id/loginFragment"
+            app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_otpFragment_to_registerFragment"
+            app:destination="@id/registerFragment"
             app:popUpTo="@id/loginFragment"
             app:popUpToInclusive="true" />
     </fragment>
@@ -92,6 +86,23 @@
             android:name="isGroup"
             app:argType="boolean"
             android:defaultValue="false" />
+        <action
+            android:id="@+id/action_chatFragment_to_contactInfoFragment"
+            app:destination="@id/contactInfoFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/contactInfoFragment"
+        android:name="com.example.realtimeapplication.ui.chat.ContactInfoFragment"
+        android:label="Contact Info"
+        tools:layout="@layout/fragment_contact_info">
+        <argument
+            android:name="userId"
+            app:argType="string" />
+        <argument
+            android:name="isGroup"
+            app:argType="boolean"
+            android:defaultValue="false" />
     </fragment>
 
     <fragment
@@ -114,7 +125,16 @@
             app:destination="@id/loginFragment"
             app:popUpTo="@id/nav_graph"
             app:popUpToInclusive="true" />
+        <action
+            android:id="@+id/action_profileFragment_to_aboutEditFragment"
+            app:destination="@id/aboutEditFragment" />
     </fragment>
+
+    <fragment
+        android:id="@+id/aboutEditFragment"
+        android:name="com.example.realtimeapplication.ui.profile.AboutEditFragment"
+        android:label="About"
+        tools:layout="@layout/fragment_about_edit" />
 
     <fragment
         android:id="@+id/createGroupFragment"

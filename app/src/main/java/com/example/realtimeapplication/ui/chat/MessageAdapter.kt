@@ -1,5 +1,7 @@
 package com.example.realtimeapplication.ui.chat
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,10 +11,8 @@ import com.example.realtimeapplication.R
 import com.example.realtimeapplication.data.model.Message
 import com.example.realtimeapplication.databinding.ItemMessageReceivedBinding
 import com.example.realtimeapplication.databinding.ItemMessageSentBinding
+import com.example.realtimeapplication.util.TimeUtils
 import com.google.firebase.auth.FirebaseAuth
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 class MessageAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
@@ -63,19 +63,20 @@ class MessageAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 binding.tvMessage.visibility = View.VISIBLE
                 binding.tvMessage.text = message.messageText
             }
-            binding.tvTime.text = formatTime(message.timestamp)
+            binding.tvTime.text = TimeUtils.formatTime(message.timestamp)
             
-            // Read receipt logic
-            if (showReadReceipts && message.read) {
-                binding.ivReadStatus.setImageResource(R.drawable.ic_check_circle)
-                binding.ivReadStatus.imageTintList = android.content.res.ColorStateList.valueOf(
-                    binding.root.context.getColor(R.color.primary)
-                )
+            // Read receipt logic: show blue ticks if read and showReadReceipts is true
+            if (showReadReceipts) {
+                binding.ivReadStatus.visibility = View.VISIBLE
+                if (message.read) {
+                    binding.ivReadStatus.setImageResource(R.drawable.ic_check) // Use a double check if you have ic_double_check
+                    binding.ivReadStatus.imageTintList = ColorStateList.valueOf(Color.parseColor("#34B7F1")) // WhatsApp Blue
+                } else {
+                    binding.ivReadStatus.setImageResource(R.drawable.ic_check)
+                    binding.ivReadStatus.imageTintList = ColorStateList.valueOf(Color.LTGRAY)
+                }
             } else {
-                binding.ivReadStatus.setImageResource(R.drawable.ic_check)
-                binding.ivReadStatus.imageTintList = android.content.res.ColorStateList.valueOf(
-                    binding.root.context.getColor(R.color.text_secondary)
-                )
+                binding.ivReadStatus.visibility = View.GONE
             }
         }
     }
@@ -91,12 +92,7 @@ class MessageAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 binding.tvMessage.visibility = View.VISIBLE
                 binding.tvMessage.text = message.messageText
             }
-            binding.tvTime.text = formatTime(message.timestamp)
+            binding.tvTime.text = TimeUtils.formatTime(message.timestamp)
         }
-    }
-
-    private fun formatTime(timestamp: Long): String {
-        val sdf = SimpleDateFormat("HH:mm", Locale.getDefault())
-        return sdf.format(Date(timestamp))
     }
 }
