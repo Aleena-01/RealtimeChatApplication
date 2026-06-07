@@ -39,7 +39,14 @@ class SplashActivity : AppCompatActivity() {
         Handler(Looper.getMainLooper()).postDelayed({
             val user = FirebaseAuth.getInstance().currentUser
             val intent = Intent(this, MainActivity::class.java)
-            intent.putExtra("is_logged_in", user != null)
+            
+            if (user != null) {
+                // If user is logged in, we need to check if profile is complete in MainActivity
+                intent.putExtra("check_profile", true)
+            } else {
+                intent.putExtra("is_logged_in", false)
+            }
+
             intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
             startActivity(intent)
             finish()

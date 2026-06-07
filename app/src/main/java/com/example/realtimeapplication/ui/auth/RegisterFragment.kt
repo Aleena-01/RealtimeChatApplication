@@ -54,18 +54,28 @@ class RegisterFragment : Fragment() {
         // Pre-fill data if available
         lifecycleScope.launch {
             binding.progressBar.visibility = View.VISIBLE
-            val userData = authRepository.getUserData(currentUser.uid)
-            binding.progressBar.visibility = View.GONE
-            if (userData != null && userData.username.isNotEmpty()) {
-                binding.etUsername.setText(userData.username)
-                binding.etAbout.setText(userData.about)
-                binding.btnSave.text = "Continue" // WhatsApp style "Continue" if returning
-                if (userData.profileImageUrl.isNotEmpty()) {
-                    Glide.with(this@RegisterFragment)
-                        .load(userData.profileImageUrl)
-                        .placeholder(R.drawable.ic_person)
-                        .into(binding.ivProfile)
+            try {
+                val userData = authRepository.getUserData(currentUser.uid)
+                if (userData != null) {
+                    if (userData.username.isNotEmpty()) {
+                        binding.etUsername.setText(userData.username)
+                        binding.btnSave.text = "Continue"
+                    }
+                    
+                    binding.etAbout.setText(userData.about)
+                    
+                    if (userData.profileImageUrl.isNotEmpty()) {
+                        Glide.with(this@RegisterFragment)
+                            .load(userData.profileImageUrl)
+                            .placeholder(R.drawable.ic_person)
+                            .error(R.drawable.ic_person)
+                            .into(binding.ivProfile)
+                    }
                 }
+            } catch (e: Exception) {
+                // Silently ignore or log fetch error
+            } finally {
+                binding.progressBar.visibility = View.GONE
             }
         }
 
@@ -105,26 +115,37 @@ class RegisterFragment : Fragment() {
         lifecycleScope.launch {
             try {
                 val existingUser = authRepository.getUserData(uid)
-                var imageUrl = ""
-                selectedImageUri?.let {
-                    imageUrl = storageRepository.uploadImage(it, "profile_images")
-                } ?: run {
-                    imageUrl = existingUser?.profileImageUrl ?: ""
+                var imageUrl = existingUser?.profileImageUrl ?: ""
+                
+                selectedImageUri?.let { uri ->
+                    try {
+                        binding.progressBar.visibility = View.VISIBLE
+                        val uploadedUrl = storageRepository.uploadImage(uri, "profile_images")
+                        if (uploadedUrl.isNotEmpty()) {
+                            imageUrl = uploadedUrl
+                        }
+                    } catch (uploadError: Exception) {
+                        binding.progressBar.visibility = View.GONE
+                        Toast.makeText(requireContext(), "Image upload failed: ${uploadError.message}. Profile will be saved without image.", Toast.LENGTH_LONG).show()
+                    }
                 }
 
                 val user = User(
                     uid = uid,
                     username = name,
-                    phoneNumber = Constants.normalizePhone(phone),
+                    phoneNumber = if (phone.isNotEmpty()) Constants.normalizePhone(phone) else (existingUser?.phoneNumber ?: ""),
                     profileImageUrl = imageUrl,
                     status = "Online",
                     about = if (about.isNotEmpty()) about else (existingUser?.about ?: "Hey there! I am using ChatApp."),
-                    lastSeen = System.currentTimeMillis()
+                    lastSeen = System.currentTimeMillis(),
+                    showLastSeen = existingUser?.showLastSeen ?: true,
+                    showReadReceipts = existingUser?.showReadReceipts ?: true
                 )
                 authRepository.saveUser(user)
+                Toast.makeText(requireContext(), "Profile saved successfully", Toast.LENGTH_SHORT).show()
                 findNavController().navigate(R.id.action_registerFragment_to_homeFragment)
             } catch (e: Exception) {
-                Toast.makeText(requireContext(), "Failed to save profile: ${e.message}", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(), "Failed to save profile: ${e.message}", Toast.LENGTH_LONG).show()
             } finally {
                 binding.progressBar.visibility = View.GONE
                 binding.btnSave.isEnabled = true

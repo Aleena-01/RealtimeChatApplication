@@ -8,10 +8,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import androidx.navigation.NavOptions
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.setupWithNavController
+import com.example.realtimeapplication.data.repository.AuthRepository
 import com.example.realtimeapplication.databinding.ActivityMainBinding
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
@@ -27,7 +31,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        // Removed enableEdgeToEdge() as it can conflict with keyboard resizing in some layouts
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
@@ -38,7 +42,25 @@ class MainActivity : AppCompatActivity() {
         binding.bottomNav.setupWithNavController(navController)
         
         val isLoggedIn = intent.getBooleanExtra("is_logged_in", false)
-        if (isLoggedIn) {
+        val checkProfile = intent.getBooleanExtra("check_profile", false)
+
+        if (checkProfile) {
+            val uid = FirebaseAuth.getInstance().currentUser?.uid
+            if (uid != null) {
+                lifecycleScope.launch {
+                    val userData = AuthRepository().getUserData(uid)
+                    if (userData == null || userData.username.isEmpty()) {
+                        navController.navigate(R.id.registerFragment, null, NavOptions.Builder()
+                            .setPopUpTo(R.id.nav_graph, true)
+                            .build())
+                    } else {
+                        navController.navigate(R.id.homeFragment, null, NavOptions.Builder()
+                            .setPopUpTo(R.id.nav_graph, true)
+                            .build())
+                    }
+                }
+            }
+        } else if (isLoggedIn) {
             navController.navigate(R.id.homeFragment, null, NavOptions.Builder()
                 .setPopUpTo(R.id.nav_graph, true)
                 .build())
